@@ -122,3 +122,15 @@ pandas
 paramiko
 phonenumbers
 xmlsec
+
+# --- Odoo core runtime extras (also needed) ---
+validators
+cachetools
+cairocffi
+cairosvg
+cssselect2
+defusedxml
+ebaysdk
+rsa
+tinycss2
+webencodings
