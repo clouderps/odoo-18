@@ -109,3 +109,16 @@ qifparse
 PyJWT
 redis
 google-auth
+
+# --- Additional Ghaima/SaaS deps from custom-addons external_dependencies ---
+SQLAlchemy
+acme
+dbfread
+dnspython
+firebase-admin
+gTTS
+mysql-connector-python
+pandas
+paramiko
+phonenumbers
+xmlsec
