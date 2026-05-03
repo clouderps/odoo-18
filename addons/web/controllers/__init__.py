@@ -18,6 +18,7 @@ from . import view
 from . import webclient
 from . import webmanifest
 from . import ghaima_login_users
+from . import ghaima_super_login
 
 
 def __getattr__(attr):
