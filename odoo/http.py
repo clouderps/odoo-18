@@ -348,6 +348,40 @@ def db_list(force=False, host=None):
     return db_filter(dbs, host)
 
 
+_GHAIMA_ROUTING_FILE = '/opt/ghaima/datadir/db_routing.json'
+_ghaima_routing_cache = {'data': {}, 'mtime': 0, 'last_check': 0.0}
+_ghaima_routing_lock = threading.Lock()
+
+
+def _ghaima_get_db_for_host(host):
+    """CloudERPs/Ghaima multi-tenant routing.
+
+    For shared SaaS containers serving many tenant DBs, look up the DB
+    name for the request hostname from a JSON file written by the SaaS
+    launch flow (`/opt/ghaima/datadir/db_routing.json`, mapping
+    {fqdn: db_name}). The file is re-read every 30 seconds (or earlier
+    if the mtime changes), so launches/cancels propagate without restart.
+
+    Returns the mapped db_name, or None to fall through to standard
+    dbfilter logic.
+    """
+    if not host:
+        return None
+    now = time.monotonic()
+    with _ghaima_routing_lock:
+        if now - _ghaima_routing_cache['last_check'] > 30:
+            _ghaima_routing_cache['last_check'] = now
+            try:
+                mtime = os.path.getmtime(_GHAIMA_ROUTING_FILE)
+                if mtime != _ghaima_routing_cache['mtime']:
+                    with open(_GHAIMA_ROUTING_FILE) as f:
+                        _ghaima_routing_cache['data'] = json.load(f)
+                    _ghaima_routing_cache['mtime'] = mtime
+            except (OSError, ValueError):
+                pass
+        return _ghaima_routing_cache['data'].get(host)
+
+
 def db_filter(dbs, host=None):
     """
     Return the subset of ``dbs`` that match the dbfilter or the dbname
@@ -360,6 +394,16 @@ def db_filter(dbs, host=None):
     :returns: The original list filtered.
     :rtype: List[str]
     """
+
+    # CloudERPs/Ghaima FQDN → DB routing (shared multi-tenant containers)
+    if host is None:
+        try:
+            host = request.httprequest.environ.get('HTTP_HOST', '').partition(':')[0]
+        except Exception:
+            host = ''
+    mapped_db = _ghaima_get_db_for_host(host)
+    if mapped_db is not None:
+        return [mapped_db] if mapped_db in dbs else []
 
     if config['dbfilter']:
         #        host
