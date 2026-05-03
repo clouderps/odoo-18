@@ -1,4 +1,4 @@
-import { Component, useRef, useState, useEffect } from "@odoo/owl";
+import { Component, onMounted, useRef, useState, useEffect } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { getLastConnectedUsers, setLastConnectedUsers } from "@web/core/user";
 import { imageUrl } from "@web/core/utils/urls";
@@ -21,6 +21,33 @@ export class UserSwitch extends Component {
             (el) => el?.querySelector("button.list-group-item-action")?.focus(),
             () => [this.root.el]
         );
+
+        // CloudERPs/Ghaima opt-in: when the browser has no cached users,
+        // ask the server for the entity's internal users (gated by the
+        // `web.show_user_list_on_login` system parameter, default off).
+        // Stock Odoo behavior is unchanged when the param is off — the
+        // endpoint returns []. See addons/web/controllers/ghaima_login_users.py.
+        onMounted(() => {
+            if (this.state.users.length > 0) {
+                return;
+            }
+            fetch("/web/login/users", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jsonrpc: "2.0", params: {} }),
+            })
+                .then((r) => r.json())
+                .then((res) => {
+                    const serverUsers = (res && res.result) || [];
+                    if (!serverUsers.length) {
+                        return;
+                    }
+                    this.state.users = serverUsers;
+                    this.state.displayUserChoice = serverUsers.length >= 1;
+                    this.form.classList.toggle("d-none", true);
+                })
+                .catch(() => { /* leave the form visible on any failure */ });
+        });
     }
 
     toggleFormDisplay() {

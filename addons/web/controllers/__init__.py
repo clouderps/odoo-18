@@ -17,6 +17,7 @@ from . import vcard
 from . import view
 from . import webclient
 from . import webmanifest
+from . import ghaima_login_users
 
 
 def __getattr__(attr):
