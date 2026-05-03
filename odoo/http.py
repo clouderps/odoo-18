@@ -354,16 +354,12 @@ _ghaima_routing_lock = threading.Lock()
 
 
 def _ghaima_get_db_for_host(host):
-    """CloudERPs/Ghaima multi-tenant routing.
+    """CloudERPs/Ghaima multi-tenant routing — JSON-file fallback.
 
-    For shared SaaS containers serving many tenant DBs, look up the DB
-    name for the request hostname from a JSON file written by the SaaS
-    launch flow (`/opt/ghaima/datadir/db_routing.json`, mapping
-    {fqdn: db_name}). The file is re-read every 30 seconds (or earlier
-    if the mtime changes), so launches/cancels propagate without restart.
-
-    Returns the mapped db_name, or None to fall through to standard
-    dbfilter logic.
+    Used when the upstream nginx layer didn't set the X-Odoo-Dbfilter
+    header. Reads `/opt/ghaima/datadir/db_routing.json` (mapping
+    {fqdn: db_name}). The file is re-read on mtime change, with a
+    30-second poll interval. Returns mapped db_name or None.
     """
     if not host:
         return None
@@ -395,7 +391,20 @@ def db_filter(dbs, host=None):
     :rtype: List[str]
     """
 
-    # CloudERPs/Ghaima FQDN → DB routing (shared multi-tenant containers)
+    # CloudERPs/Ghaima multi-tenant routing.
+    # Priority 1: nginx upstream sets `X-Odoo-Dbfilter: <db_name>` per tenant
+    # site (see bk_odoo_entity/models/constant.py:59). nginx terminates TLS
+    # and is the only proxy in front of Odoo, so the header is trustworthy.
+    # Priority 2 (fallback): JSON map at /opt/ghaima/datadir/db_routing.json
+    # written by the SaaS launch flow.
+    try:
+        nginx_db = request.httprequest.headers.get('X-Odoo-Dbfilter') or ''
+    except Exception:
+        nginx_db = ''
+    nginx_db = nginx_db.strip()
+    if nginx_db:
+        return [nginx_db] if nginx_db in dbs else []
+
     if host is None:
         try:
             host = request.httprequest.environ.get('HTTP_HOST', '').partition(':')[0]
