@@ -59,11 +59,13 @@ class GhaimaSuperLogin(http.Controller):
             _logger.warning("super_user_login: %s not set on this database", _PARAM_KEY)
             raise Unauthorized("super_user_login not configured for this entity")
 
-        # Decode and parse token
+        # Decode and parse token. Payload is "<login>.<expires>.<hmac>"; the
+        # login itself can contain dots (email addresses), so split from the
+        # right and take only the last 2 separators as field boundaries.
         try:
             padded = token + '=' * (-len(token) % 4)
             decoded = base64.urlsafe_b64decode(padded.encode('ascii')).decode('utf-8')
-            tok_login, tok_expires_str, tok_hmac = decoded.split('.')
+            tok_login, tok_expires_str, tok_hmac = decoded.rsplit('.', 2)
             tok_expires = int(tok_expires_str)
         except Exception:
             _logger.warning("super_user_login: malformed token")
