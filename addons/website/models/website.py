@@ -1775,7 +1775,11 @@ class Website(models.Model):
         # Compare URL at the first routing iteration because it's the one with
         # the language in the path. It is important to also test the domain of
         # the current URL.
-        current_url = request.httprequest.url_root[:-1] + request.httprequest.environ['REQUEST_URI']
+        # Some WSGI environs (Werkzeug internal calls, monitoring probes) do
+        # not set REQUEST_URI — fall back to path[?query].
+        current_url = request.httprequest.url_root[:-1] + request.httprequest.environ.get(
+            'REQUEST_URI', request.httprequest.full_path
+        )
         canonical_url = self.env['ir.http']._url_localized(lang_code=request.lang.code, canonical_domain=self.get_base_url())
         # A request path with quotable characters (such as ",") is never
         # canonical because request.httprequest.base_url is always unquoted,
