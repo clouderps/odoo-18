@@ -425,13 +425,7 @@
         <field name="menu_sequence">45</field>
         <field name="feature_url">/blog</field>
     </record>
-    <record id="feature_module_career" model="website.configurator.feature">
-        <field name="name">Career</field>
-        <field name="description">Publish job offers and let people apply</field>
-        <field name="sequence">8</field>
-        <field name="module_id" ref="base.module_website_hr_recruitment"/>
-        <field name="icon">fa-address-card</field>
-    </record>
+    <!-- feature_module_career removed: website_hr_recruitment not present in this fork -->
     <record id="feature_module_shop" model="website.configurator.feature">
         <field name="name">Shop</field>
         <field name="description">Sell more with an eCommerce</field>
