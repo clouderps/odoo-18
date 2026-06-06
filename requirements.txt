@@ -121,6 +121,7 @@ mysql-connector-python
 pandas
 paramiko
 phonenumbers
+PyYAML
 xmlsec
 
 # --- Odoo core runtime extras (also needed) ---
